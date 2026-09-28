@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>梗王吐槽机 — 你说啥我都喷</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card-bg: #1a1a2e;
+    --card-border: #2a2a4a;
+    --accent: #e94560;
+    --accent-2: #f39c12;
+    --text: #eee;
+    --text-dim: #888;
+    --bubble-user: #16213e;
+    --intensity-1: #2ecc71;
+    --intensity-2: #f1c40f;
+    --intensity-3: #e67e22;
+    --intensity-4: #e74c3c;
+    --intensity-5: #c0392b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ===== 顶部栏 ===== */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 56px;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px;
+    z-index: 100;
+  }
+  .topbar .logo {
+    font-weight: 800;
+    font-size: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.5px;
+  }
+  .topbar .counter {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .topbar .counter b { color: var(--accent); font-size: 14px; }
+
+  /* ===== 对话区域 ===== */
+  .chat-area {
+    position: fixed;
+    top: 56px; bottom: 72px; left: 0; right: 0;
+    overflow-y: auto;
+    padding: 16px 12px 24px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  .chat-area::-webkit-scrollbar { width: 0; }
+
+  /* 用户气泡 */
+  .user-bubble {
+    max-width: 78%;
+    margin: 12px 0 4px auto;
+    background: var(--bubble-user);
+    border-radius: 16px 16px 4px 16px;
+    padding: 12px 16px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    word-break: break-word;
+    animation: slideInRight 0.3s ease;
+  }
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* ===== 毒舌卡片 ===== */
+  .roast-card {
+    max-width: 92%;
+    margin: 8px 0 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px 16px 16px 4px;
+    overflow: hidden;
+    animation: slideInLeft 0.4s ease;
+    position: relative;
+  }
+  @keyframes slideInLeft {
+    from { opacity: 0; transform: translateX(-20px) translateY(8px); }
+    to { opacity: 1; transform: translateX(0) translateY(0); }
+  }
+
+  /* 卡片头部：强度条 */
+  .roast-card .card-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px 0;
+  }
+  .roast-card .emoji {
+    font-size: 28px;
+    line-height: 1;
+  }
+  .roast-card .intensity-bar {
+    flex: 1;
+    display: flex; gap: 3px;
+  }
+  .roast-card .intensity-bar span {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: #333;
+    transition: background 0.3s;
+  }
+  .roast-card .intensity-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+
+  /* 卡片正文 */
+  .roast-card .card-body {
+    padding: 12px 16px 14px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text);
+    word-break: break-word;
+    font-weight: 500;
+  }
+
+  /* 卡片底部：梗标签 */
+  .roast-card .card-footer {
+    padding: 0 16px 12px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .roast-card .meme-tag {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: rgba(233,69,96,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(233,69,96,0.3);
+  }
+
+  /* 卡片补刀 */
+  .roast-card .comeback {
+    padding: 0 16px 14px;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: normal;
+    border-top: 1px dashed rgba(255,255,255,0.08);
+    padding-top: 10px;
+    margin-top: 4px;
+  }
+
+  /* 加载动画 */
+  .loading-card {
+    max-width: 70%;
+    margin: 8px 0;
+    background: var(--card-bg);
+    border-radius: 16px 16px 16px 4px;
+    padding: 20px 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .loading-dots {
+    display: flex; gap: 4px;
+  }
+  .loading-dots span {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    animation: bounce 0.6s infinite alternate;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce {
+    from { opacity: 0.3; transform: translateY(0); }
+    to { opacity: 1; transform: translateY(-6px); }
+  }
+  .loading-card .loading-text {
+    font-size: 14px; color: var(--text-dim);
+  }
+
+  /* ===== 欢迎卡片 ===== */
+  .welcome-card {
+    max-width: 90%;
+    margin: 24px auto;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 28px 24px;
+    text-align: center;
+  }
+  .welcome-card .big-emoji {
+    font-size: 48px;
+    margin-bottom: 12px;
+  }
+  .welcome-card h2 {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .welcome-card p {
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .welcome-card .start-btn {
+    display: inline-block;
+    padding: 10px 32px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .welcome-card .start-btn:active {
+    transform: scale(0.96);
+  }
+
+  /* ===== 输入栏 ===== */
+  .input-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 72px;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--card-border);
+    display: flex; align-items: center; gap: 8px;
+    padding: 0 12px 12px;
+    z-index: 100;
+  }
+  .input-bar textarea {
+    flex: 1;
+    height: 44px;
+    max-height: 80px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 22px;
+    padding: 12px 18px;
+    font-size: 15px;
+    color: var(--text);
+    resize: none;
+    outline: none;
+    font-family: inherit;
+    line-height: 1.4;
+    transition: border-color 0.2s;
+  }
+  .input-bar textarea:focus {
+    border-color: var(--accent);
+  }
+  .input-bar textarea::placeholder {
+    color: #555;
+  }
+  .input-bar .send-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, opacity 0.2s;
+    flex-shrink: 0;
+  }
+  .input-bar .send-btn:active {
+    transform: scale(0.9);
+  }
+  .input-bar .send-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* ===== 暴击特效 ===== */
+  .critical-hit {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 32px; font-weight: 900;
+    color: var(--intensity-5);
+    text-shadow: 0 0 20px rgba(233,69,96,0.6);
+    pointer-events: none;
+    z-index: 200;
+    animation: critFlash 1s ease forwards;
+  }
+  @keyframes critFlash {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+  }
+
+  /* 响应式 */
+  @media (max-width: 480px) {
+    .roast-card .card-body { font-size: 15px; }
+    .user-bubble { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">🔥 梗王吐槽机</div>
+  <div class="counter">被喷 <b id="roastCount">0</b> 次</div>
+</div>
+
+<div class="chat-area" id="chatArea">
+  <div class="welcome-card" id="welcomeCard">
+    <div class="big-emoji">🤡</div>
+    <h2>欢迎来到梗王吐槽机</h2>
+    <p>你说啥我都喷。用最新的互联网梗疯狂吐槽你的每一句话。<br>不信你试试说点什么。</p>
+    <button class="start-btn" onclick="startChat()">来吧，喷我</button>
+  </div>
+</div>
+
+<div class="input-bar">
+  <textarea id="userInput" placeholder="说点什么让梗王来喷你..." rows="1" disabled></textarea>
+  <button class="send-btn" id="sendBtn" disabled onclick="sendMessage()">↑</button>
+</div>
+
+<script>
+const chatArea = document.getElementById('chatArea');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const welcomeCard = document.getElementById('welcomeCard');
+const roastCountEl = document.getElementById('roastCount');
+
+let history = [];
+let roastCount = 0;
+let isWaiting = false;
+
+function startChat() {
+  if (welcomeCard) welcomeCard.remove();
+  userInput.disabled = false;
+  sendBtn.disabled = false;
+  userInput.focus();
+}
+
+// 自适应高度
+userInput.addEventListener('input', () => {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 80) + 'px';
+});
+
+// Enter 发送
+userInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+function addUserBubble(text) {
+  const div = document.createElement('div');
+  div.className = 'user-bubble';
+  div.textContent = text;
+  chatArea.appendChild(div);
+  scrollToBottom();
+}
+
+function addLoadingCard() {
+  const div = document.createElement('div');
+  div.className = 'loading-card';
+  div.id = 'loadingCard';
+  div.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div><span class="loading-text">梗王正在组织语言...</span>';
+  chatArea.appendChild(div);
+  scrollToBottom();
+}
+
+function removeLoadingCard() {
+  const el = document.getElementById('loadingCard');
+  if (el) el.remove();
+}
+
+function addRoastCard(data) {
+  const intensity = data.intensity || 3;
+  const intensityColors = ['#2ecc71','#f1c40f','#e67e22','#e74c3c','#c0392b'];
+  const intensityLabels = ['轻调侃','有点损','毒舌级','暴击','核弹级'];
+
+  const div = document.createElement('div');
+  div.className = 'roast-card';
+
+  // 强度条
+  let bars = '';
+  for (let i = 0; i < 5; i++) {
+    const color = i < intensity ? intensityColors[intensity-1] : '#333';
+    bars += `<span style="background:${color}"></span>`;
+  }
+
+  // 梗标签
+  let memeTags = '';
+  if (data.meme_used && Array.isArray(data.meme_used)) {
+    data.meme_used.forEach(m => {
+      memeTags += `<span class="meme-tag">#${m}</span>`;
+    });
+  }
+
+  div.innerHTML = `
+    <div class="card-header">
+      <span class="emoji">${data.emoji || '😏'}</span>
+      <div class="intensity-bar">${bars}</div>
+      <span class="intensity-label">${intensityLabels[intensity-1] || '毒舌级'}</span>
+    </div>
+    <div class="card-body">${escapeHtml(data.roast || '...')}</div>
+    ${memeTags ? `<div class="card-footer">${memeTags}</div>` : ''}
+    ${data.comeback_hint ? `<div class="comeback">${escapeHtml(data.comeback_hint)}</div>` : ''}
+  `;
+
+  chatArea.appendChild(div);
+
+  // 暴击特效
+  if (intensity >= 5) {
+    showCriticalHit();
+  }
+
+  roastCount++;
+  roastCountEl.textContent = roastCount;
+  scrollToBottom();
+}
+
+function showCriticalHit() {
+  const texts = ['💥 暴击！', '☢️ 核弹级吐槽！', '🔥 毁灭打击！', '☠️ 致命一喷！'];
+  const text = texts[Math.floor(Math.random() * texts.length)];
+  const el = document.createElement('div');
+  el.className = 'critical-hit';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function scrollToBottom() {
+  setTimeout(() => {
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }, 50);
+}
+
+async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text || isWaiting) return;
+
+  isWaiting = true;
+  sendBtn.disabled = true;
+  userInput.value = '';
+  userInput.style.height = 'auto';
+
+  addUserBubble(text);
+  addLoadingCard();
+
+  history.push({ role: 'user', content: text });
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: history.slice(-10)
+      })
+    });
+
+    if (!res.ok) throw new Error('API error: ' + res.status);
+
+    const data = await res.json();
+
+    removeLoadingCard();
+
+    if (data.roast) {
+      addRoastCard(data);
+      history.push({ role: 'assistant', content: data.roast });
+    } else {
+      addRoastCard({
+        roast: '你这话把梗王CPU干烧了...容我缓缓。',
+        emoji: '🤯',
+        intensity: 3,
+        meme_used: ['CPU烧了'],
+        comeback_hint: '要不要再试试说点人话？'
+      });
+    }
+  } catch (err) {
+    removeLoadingCard();
+    addRoastCard({
+      roast: '不是哥们，服务器都让你说宕机了。你先别说了，让梗王缓一缓。',
+      emoji: '💀',
+      intensity: 4,
+      meme_used: ['不是哥们'],
+      comeback_hint: '网络开小差了，再试一次？'
+    });
+    console.error('Error:', err);
+  }
+
+  isWaiting = false;
+  sendBtn.disabled = false;
+  userInput.focus();
+}
+</script>
+
+</body>
+</html>

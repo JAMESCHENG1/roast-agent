@@ -1,0 +1,17 @@
+# netlify.toml — 梗王吐槽机部署配置
+
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# API 路由：/api/* → /.netlify/functions/api/:splat
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA 回退：其他路由都返回 index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

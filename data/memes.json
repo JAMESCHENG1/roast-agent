@@ -1,0 +1,405 @@
+{
+  "last_updated": "2026-09-28",
+  "memes": [
+    {
+      "phrase": "尊嘟假嘟",
+      "meaning": "真的假的？谐音卖萌用语",
+      "origin": "抖音",
+      "usage": "当用户说离谱的话时用来质疑",
+      "tags": ["质疑", "卖萌"],
+      "intensity": 3
+    },
+    {
+      "phrase": "i人/e人",
+      "meaning": "MBTI性格分类，i人=社恐内向，e人=社牛外向",
+      "origin": "抖音/微博",
+      "usage": "根据用户表现判断性格类型吐槽",
+      "tags": ["性格", "社交"],
+      "intensity": 2
+    },
+    {
+      "phrase": "city不city",
+      "meaning": "洋不洋气，潮不潮",
+      "origin": "抖音",
+      "usage": "吐槽用户的品味或选择不够时尚",
+      "tags": ["品味", "时尚"],
+      "intensity": 3
+    },
+    {
+      "phrase": "这不是去幼儿园的车",
+      "meaning": "表示被骗了，事情发展和预期完全不同",
+      "origin": "抖音",
+      "usage": "用户说完正常的话突然暴走时用",
+      "tags": ["被骗", "反转"],
+      "intensity": 4
+    },
+    {
+      "phrase": "退退退",
+      "meaning": "嫌弃、拒绝、让对方退后",
+      "origin": "抖音",
+      "usage": "用户说了尴尬或离谱的话时使用",
+      "tags": ["嫌弃", "拒绝"],
+      "intensity": 3
+    },
+    {
+      "phrase": "大无语事件",
+      "meaning": "非常无语，不知道说什么好",
+      "origin": "微博",
+      "usage": "用户说了让人无法理解的话时",
+      "tags": ["无语", "困惑"],
+      "intensity": 2
+    },
+    {
+      "phrase": "栓Q",
+      "meaning": "thank you的谐音，实际表示无语、感谢你让我更无语了",
+      "origin": "抖音",
+      "usage": "吐槽结束时的收尾或表示无奈",
+      "tags": ["无语", "收尾"],
+      "intensity": 2
+    },
+    {
+      "phrase": "芭比Q了",
+      "meaning": "完蛋了、凉了、没了",
+      "origin": "抖音",
+      "usage": "用户处境尴尬或说了不该说的话时",
+      "tags": ["完蛋", "凉了"],
+      "intensity": 3
+    },
+    {
+      "phrase": "你没事吧",
+      "meaning": "关心中带着嫌弃，觉得对方不正常",
+      "origin": "微博/综艺",
+      "usage": "用户说的话逻辑不通时直接用",
+      "tags": ["嫌弃", "关心"],
+      "intensity": 3
+    },
+    {
+      "phrase": "真的栓Q",
+      "meaning": "真的是谢谢了，实为无奈",
+      "origin": "抖音",
+      "usage": "用户说了感谢但其实是废话时",
+      "tags": ["无奈", "感谢"],
+      "intensity": 2
+    },
+    {
+      "phrase": "啊对对对",
+      "meaning": "敷衍认同，其实完全不认同",
+      "origin": "B站/抖音",
+      "usage": "用户说了自己觉得对但明显有问题的观点时",
+      "tags": ["敷衍", "讽刺"],
+      "intensity": 3
+    },
+    {
+      "phrase": "听我说谢谢你",
+      "meaning": "因为有你，温暖了四季（反讽，实际很烦）",
+      "origin": "抖音",
+      "usage": "用户做了让人哭笑不得的事时",
+      "tags": ["反讽", "嫌弃"],
+      "intensity": 3
+    },
+    {
+      "phrase": "那我走？",
+      "meaning": "觉得尴尬或不被需要，想要离开",
+      "origin": "抖音",
+      "usage": "对话陷入尴尬时破冰用",
+      "tags": ["尴尬", "破冰"],
+      "intensity": 2
+    },
+    {
+      "phrase": "你别太离谱",
+      "meaning": "直接说对方说的话太夸张",
+      "origin": "微博",
+      "usage": "用户说明显荒谬的话时直接吐槽",
+      "tags": ["直接", "离谱"],
+      "intensity": 3
+    },
+    {
+      "phrase": "CPU烧了",
+      "meaning": "思考过度，大脑过载",
+      "origin": "抖音",
+      "usage": "用户说的话复杂但没有意义时",
+      "tags": ["过载", "复杂"],
+      "intensity": 3
+    },
+    {
+      "phrase": "破防了",
+      "meaning": "心理防线被击破，可以是感动也可以是崩溃",
+      "origin": "B站/微博",
+      "usage": "用户说了触动人但更多是让人崩溃的话时",
+      "tags": ["崩溃", "触动"],
+      "intensity": 3
+    },
+    {
+      "phrase": "遥遥领先",
+      "meaning": "原指华为技术领先，现广泛用于反讽任何方面领先",
+      "origin": "抖音/B站",
+      "usage": "用户吹牛或自夸时反讽使用",
+      "tags": ["反讽", "自夸"],
+      "intensity": 4
+    },
+    {
+      "phrase": "遥遥领先，但没完全领先",
+      "meaning": "反讽版本的遥遥领先，暗示差距",
+      "origin": "B站",
+      "usage": "用户说自己在某方面不错但其实一般时",
+      "tags": ["反讽", "差距"],
+      "intensity": 4
+    },
+    {
+      "phrase": "不是哥们",
+      "meaning": "表示震惊、无法理解对方行为",
+      "origin": "抖音",
+      "usage": "用户说了出人意料的话时开头使用",
+      "tags": ["震惊", "无法理解"],
+      "intensity": 3
+    },
+    {
+      "phrase": "泰裤辣",
+      "meaning": "太酷了的谐音梗，实为调侃",
+      "origin": "抖音",
+      "usage": "用户炫耀时用反讽语气",
+      "tags": ["反讽", "炫耀"],
+      "intensity": 3
+    },
+    {
+      "phrase": "6到飞起",
+      "meaning": "厉害到不行，可以是真心也可以反讽",
+      "origin": "B站/抖音",
+      "usage": "用户做了令人惊讶的事时",
+      "tags": ["厉害", "反讽"],
+      "intensity": 2
+    },
+    {
+      "phrase": "蒜了蒜了",
+      "meaning": "算了的谐音，表示放弃、不想说了",
+      "origin": "抖音",
+      "usage": "用户说了太多废话，不想再听时",
+      "tags": ["放弃", "废话"],
+      "intensity": 2
+    },
+    {
+      "phrase": "你说得对，但...",
+      "meaning": "先认同再转折，实际是反驳",
+      "origin": "B站/贴吧",
+      "usage": "用户说了看似有理但实际有漏洞的话时",
+      "tags": ["反驳", "转折"],
+      "intensity": 3
+    },
+    {
+      "phrase": "典中典",
+      "meaning": "太经典了，经典到教科书级别",
+      "origin": "B站",
+      "usage": "用户说了非常套路化的话时",
+      "tags": ["套路", "经典"],
+      "intensity": 3
+    },
+    {
+      "phrase": "急了急了",
+      "meaning": "激怒对方后说对方急了",
+      "origin": "B站/微博",
+      "usage": "用户显得激动或辩护时使用",
+      "tags": ["激怒", "辩护"],
+      "intensity": 3
+    },
+    {
+      "phrase": "乐",
+      "meaning": "一个字表达觉得好笑或荒谬",
+      "origin": "B站/贴吧",
+      "usage": "用户说了可笑的话时单字回复",
+      "tags": ["好笑", "荒谬"],
+      "intensity": 1
+    },
+    {
+      "phrase": "纯纯的",
+      "meaning": "地道的、纯粹的，形容程度",
+      "origin": "抖音",
+      "usage": "用户的行为很典型时加上形容",
+      "tags": ["形容", "程度"],
+      "intensity": 2
+    },
+    {
+      "phrase": "谁懂啊",
+      "meaning": "寻求认同，谁有相同感受",
+      "origin": "抖音/微博",
+      "usage": "吐槽完用户后加上寻求观众认同",
+      "tags": ["认同", "共鸣"],
+      "intensity": 2
+    },
+    {
+      "phrase": "也是没谁了",
+      "meaning": "独特到无人能及，褒贬皆可",
+      "origin": "微博",
+      "usage": "用户做了独一无二的事时",
+      "tags": ["独特", "无奈"],
+      "intensity": 2
+    },
+    {
+      "phrase": "这就很抽象了",
+      "meaning": "形容事情离谱、难以理解",
+      "origin": "B站",
+      "usage": "用户说了无法理解的话时",
+      "tags": ["离谱", "抽象"],
+      "intensity": 3
+    },
+    {
+      "phrase": "已读不回是最大的温柔",
+      "meaning": "对方说了太多废话，不回复已经是客气了",
+      "origin": "微博",
+      "usage": "用户说了太多话时吐槽",
+      "tags": ["废话", "温柔"],
+      "intensity": 3
+    },
+    {
+      "phrase": "鸡你太美",
+      "meaning": "原曲只因你太美，谐音为鸡你太美，经典鬼畜梗",
+      "origin": "B站",
+      "usage": "用户提到篮球/唱跳/健身时使用",
+      "tags": ["鬼畜", "经典"],
+      "intensity": 4
+    },
+    {
+      "phrase": "遥遥领先（华为版）",
+      "meaning": "华为广告语，现已成为网络万能反讽",
+      "origin": "抖音",
+      "usage": "用户自夸时反讽",
+      "tags": ["反讽", "万能"],
+      "intensity": 4
+    },
+    {
+      "phrase": "这不比某品牌好？",
+      "meaning": "拉踩式对比，暗示对方选择不行",
+      "origin": "B站",
+      "usage": "用户做了选择时拉踩吐槽",
+      "tags": ["对比", "拉踩"],
+      "intensity": 3
+    },
+    {
+      "phrase": "666",
+      "meaning": "厉害厉害，可褒可贬",
+      "origin": "通用",
+      "usage": "用户做了令人惊叹的事时",
+      "tags": ["厉害", "万能"],
+      "intensity": 1
+    },
+    {
+      "phrase": "汗流浃背了吧",
+      "meaning": "紧张了、慌了，压力很大",
+      "origin": "抖音",
+      "usage": "用户被戳中痛处时使用",
+      "tags": ["紧张", "压力"],
+      "intensity": 3
+    },
+    {
+      "phrase": "小黑子",
+      "meaning": "黑粉的昵称，形容爱黑别人的人",
+      "origin": "B站/抖音",
+      "usage": "用户一直在挑刺时使用",
+      "tags": ["黑粉", "挑刺"],
+      "intensity": 3
+    },
+    {
+      "phrase": "露出鸡脚",
+      "meaning": "露出马脚的谐音，暴露真实意图",
+      "origin": "B站",
+      "usage": "用户说了暴露自己想法的话时",
+      "tags": ["暴露", "马脚"],
+      "intensity": 3
+    },
+    {
+      "phrase": "你管这叫...",
+      "meaning": "质疑对方的定义，觉得名不副实",
+      "origin": "B站",
+      "usage": "用户给自己的东西定义时质疑",
+      "tags": ["质疑", "定义"],
+      "intensity": 3
+    },
+    {
+      "phrase": "这很难评",
+      "meaning": "这很难评价，不知道说什么好",
+      "origin": "抖音",
+      "usage": "用户说了无法评价的话时",
+      "tags": ["难评", "无语"],
+      "intensity": 2
+    },
+    {
+      "phrase": "我先润了",
+      "meaning": "我先走了/先溜了，润=run",
+      "origin": "B站",
+      "usage": "对话变得尴尬或无聊时表示要走",
+      "tags": ["溜走", "尴尬"],
+      "intensity": 2
+    },
+    {
+      "phrase": "摆烂",
+      "meaning": "放弃努力，随它去吧",
+      "origin": "B站/微博",
+      "usage": "用户说放弃的话时表示认同",
+      "tags": ["放弃", "认同"],
+      "intensity": 2
+    },
+    {
+      "phrase": "卷又卷不赢，躺又躺不平",
+      "meaning": "夹在中间的当代人状态",
+      "origin": "微博",
+      "usage": "用户抱怨生活或工作时共鸣吐槽",
+      "tags": ["共鸣", "状态"],
+      "intensity": 3
+    },
+    {
+      "phrase": "精神状态良好",
+      "meaning": "反讽，实际精神状态堪忧",
+      "origin": "抖音",
+      "usage": "用户说了精神状态可疑的话时反讽",
+      "tags": ["精神", "反讽"],
+      "intensity": 3
+    },
+    {
+      "phrase": "这不就来了嘛",
+      "meaning": "事情果然发生了，在意料之中",
+      "origin": "通用",
+      "usage": "用户做了预期中的事时",
+      "tags": ["预期", "果然"],
+      "intensity": 1
+    },
+    {
+      "phrase": "哈人",
+      "meaning": "吓人的谐音，表示被吓到",
+      "origin": "B站",
+      "usage": "用户说了出人意料的话时",
+      "tags": ["吓到", "意外"],
+      "intensity": 2
+    },
+    {
+      "phrase": "鼠鼠我啊",
+      "meaning": "自嘲为鼠鼠，底层小人物的自我调侃",
+      "origin": "贴吧/B站",
+      "usage": "用户自嘲或表现卑微时配合使用",
+      "tags": ["自嘲", "底层"],
+      "intensity": 3
+    },
+    {
+      "phrase": "终将沐入癌殿",
+      "meaning": "终将堕入黑暗的改编，形容不可避免的结局",
+      "origin": "B站",
+      "usage": "用户说了注定走偏的话题时",
+      "tags": ["命运", "黑暗"],
+      "intensity": 4
+    },
+    {
+      "phrase": "CPU干烧了属于是",
+      "meaning": "大脑过载了，处理不了了",
+      "origin": "抖音",
+      "usage": "用户说的话逻辑太绕时使用",
+      "tags": ["过载", "逻辑"],
+      "intensity": 3
+    },
+    {
+      "phrase": "属实是冤枉",
+      "meaning": "确实冤枉，但常用于反讽",
+      "origin": "B站",
+      "usage": "用户说自己冤枉时反讽使用",
+      "tags": ["冤枉", "反讽"],
+      "intensity": 3
+    }
+  ]
+}
