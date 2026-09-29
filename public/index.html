@@ -733,9 +733,19 @@ function removeLoadingCard() {
 
 // ===== 反应按钮 follow-up 弹出 =====
 function showFollowUps(followUps, btn, roastCard) {
-  // 移除已有的 follow-up 面板
+  // 移除本卡片上已有的 follow-up 面板
   const existing = roastCard.querySelector('.follow-up-panel');
-  if (existing) { existing.remove(); return; }
+  if (existing) {
+    existing.remove();
+    // 如果是同一个按钮再点一次，只收起不再展开
+    if (btn.dataset.expanded === 'true') {
+      btn.dataset.expanded = 'false';
+      return;
+    }
+  }
+  // 重置所有按钮的 expanded 状态
+  roastCard.querySelectorAll('.action-btn').forEach(b => b.dataset.expanded = 'false');
+  btn.dataset.expanded = 'true';
 
   const panel = document.createElement('div');
   panel.className = 'follow-up-panel';
@@ -797,28 +807,7 @@ function addRoastCard(data) {
 
   const comeback = data.comeback_hint || '';
 
-  // 生成反应按钮（优先用 AI 返回的 reactions，否则用默认）
-  let actionsHtml = '';
-  const reactions = data.reactions;
-  if (reactions && Array.isArray(reactions) && reactions.length >= 3) {
-    reactions.forEach((r, idx) => {
-      const safeLabel = (r.label || '反应').replace(/'/g, "\\'").replace(/"/g, '&quot;');
-      const emoji = r.emoji || '😏';
-      const followUps = (r.follow_ups || []).map(f => f.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
-      actionsHtml += `<button class="action-btn" onclick='triggerReaction(this, ${JSON.stringify(followUps)}, this.closest(".roast-card"))'>${emoji} ${safeLabel}</button>`;
-    });
-  } else {
-    actionsHtml = `
-      <button class="action-btn" onclick="triggerReaction(this, [\"你还敢说？我觉得你说的不对\",\"行，那你再说一遍我听听\",\"你说得对？那为什么没人认同你\"], this.closest('.roast-card'))">😂 绷不住</button>
-      <button class="action-btn" onclick="triggerReaction(this, [\"你才嘴毒！你全家都嘴毒\",\"有本事你说句好听的\",\"你是不是对所有人这么毒\"], this.closest('.roast-card'))">😡 不服</button>
-      <button class="action-btn" onclick="triggerReaction(this, [\"确实扎心了，我承认\",\"好吧你说的有道理\",\"但我还是觉得你说得太狠了\"], this.closest('.roast-card'))">💀 扎心</button>`;
-  }
-
-  if (comeback) {
-    const safeComeback = comeback.replace(/'/g, "\\'").replace(/"/g, '&quot;');
-    actionsHtml += `<button class="action-btn" onclick="useTopic('${safeComeback}')">↩️ ${escapeHtml(comeback)}</button>`;
-  }
-
+  // 先构建基础 HTML
   div.innerHTML = `
     <div class="card-header">
       <span class="emoji">${data.emoji || '😏'}</span>
@@ -827,8 +816,48 @@ function addRoastCard(data) {
     </div>
     <div class="card-body">${escapeHtml(data.roast || '...')}</div>
     ${memeTags ? `<div class="card-footer">${memeTags}</div>` : ''}
-    <div class="card-actions">${actionsHtml}</div>
+    <div class="card-actions"></div>
   `;
+
+  // 用 DOM API 创建反应按钮（避免引号冲突）
+  const actionsDiv = div.querySelector('.card-actions');
+  const reactions = data.reactions;
+  let btnList = [];
+  if (reactions && Array.isArray(reactions) && reactions.length >= 3) {
+    btnList = reactions.map(r => ({
+      emoji: r.emoji || '😏',
+      label: r.label || '反应',
+      followUps: r.follow_ups || []
+    }));
+  } else {
+    btnList = [
+      { emoji: '😂', label: '绷不住', followUps: ['你还敢说？我觉得你说的不对', '行，那你再说一遍我听听', '你说得对？那为什么没人认同你'] },
+      { emoji: '😡', label: '不服', followUps: ['你才嘴毒！你全家都嘴毒', '有本事你说句好听的', '你是不是对所有人这么毒'] },
+      { emoji: '💀', label: '扎心', followUps: ['确实扎心了，我承认', '好吧你说的有道理', '但我还是觉得你说得太狠了'] },
+    ];
+  }
+
+  btnList.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'action-btn';
+    btn.textContent = item.emoji + ' ' + item.label;
+    btn.onclick = function() {
+      triggerReaction(this, item.followUps, div);
+    };
+    actionsDiv.appendChild(btn);
+  });
+
+  // 补刀按钮
+  if (comeback) {
+    const cbBtn = document.createElement('button');
+    cbBtn.className = 'action-btn';
+    cbBtn.textContent = '↩️ ' + comeback;
+    cbBtn.onclick = function() {
+      userInput.value = comeback;
+      sendMessage();
+    };
+    actionsDiv.appendChild(cbBtn);
+  }
 
   chatArea.appendChild(div);
 
