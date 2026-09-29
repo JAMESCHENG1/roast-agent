@@ -8,56 +8,72 @@ import { fileURLToPath } from 'node:url';
 
 const _dirname = dirname(fileURLToPath(import.meta.url));
 
-// ===== 数据存储（Netlify Blobs 优先，/tmp JSON 兜底）=====
-let storeInstance = null;
+// ===== 持久化存储（Netlify 内置 netlify:blobs，7天数据不丢失）=====
+// netlify:blobs 是 Netlify 运行时内置模块，无需 npm install
 
-async function getStore() {
-  if (storeInstance) return storeInstance;
+let _store = null;
 
-  // 尝试 Netlify Blobs（动态 import）
+async function getBlobStore() {
+  if (_store !== null) return _store;
   try {
     const blobs = await import('netlify:blobs');
-    if (blobs && blobs.getStore) {
-      storeInstance = { type: 'blobs', store: blobs.getStore('roast-stats') };
-      return storeInstance;
-    }
-  } catch {}
-
-  // 兜底：用 /tmp 下的 JSON 文件（函数实例生命周期内有效）
-  const tmpDir = '/tmp/roast-stats';
-  try {
-    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
-  } catch {}
-
-  storeInstance = { type: 'file', dir: tmpDir };
-  return storeInstance;
+    _store = blobs.getStore('roast-stats');
+  } catch {
+    _store = false; // 标记不可用
+  }
+  return _store;
 }
 
-// 通用 get/set
+// 内存缓存（减少 Blobs 调用次数）
+const cache = new Map();
+
 async function storeGet(key) {
-  const s = await getStore();
-  if (!s) return null;
-  if (s.type === 'blobs') {
-    return await s.store.get(key);
+  if (cache.has(key)) return cache.get(key);
+
+  // 优先用 Netlify Blobs
+  const store = await getBlobStore();
+  if (store) {
+    try {
+      const val = await store.get(key);
+      if (val) {
+        cache.set(key, val);
+        return val;
+      }
+      return null;
+    } catch (e) {
+      console.error('Blobs get error:', e.message);
+    }
   }
-  // 文件兜底
+
+  // 降级：/tmp 文件
   try {
-    const fp = join(s.dir, key.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
+    const tmpDir = '/tmp/roast-stats';
+    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+    const fp = join(tmpDir, key.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
     if (!existsSync(fp)) return null;
     return readFileSync(fp, 'utf-8');
   } catch { return null; }
 }
 
 async function storeSet(key, value) {
-  const s = await getStore();
-  if (!s) return;
-  if (s.type === 'blobs') {
-    await s.store.set(key, value);
-    return;
+  cache.set(key, value);
+
+  // 优先用 Netlify Blobs
+  const store = await getBlobStore();
+  if (store) {
+    try {
+      await store.set(key, value);
+      return;
+    } catch (e) {
+      console.error('Blobs set error:', e.message);
+    }
   }
-  // 文件兜底
+
+  // 降级：/tmp 文件
   try {
-    const fp = join(s.dir, key.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
+    const tmpDir = '/tmp/roast-stats';
+    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+    const fp = join(tmpDir, key.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
     writeFileSync(fp, value, 'utf-8');
   } catch {}
 }
