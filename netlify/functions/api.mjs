@@ -5,12 +5,12 @@ import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const _dirname = dirname(fileURLToPath(import.meta.url));
 
 // 读取梗库
 function loadMemes() {
   try {
-    const memesPath = join(__dirname, '..', '..', 'data', 'memes.json');
+    const memesPath = join(_dirname, '..', '..', 'data', 'memes.json');
     const raw = readFileSync(memesPath, 'utf-8');
     const data = JSON.parse(raw);
     return data.memes || [];
