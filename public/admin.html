@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>梗王吐槽机 — 数据看板</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --card-bg: #1a1a2e;
+    --card-border: #2a2a4a;
+    --accent: #e94560;
+    --accent-2: #f39c12;
+    --accent-3: #0f3460;
+    --text: #eee;
+    --text-dim: #888;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  /* 标题 */
+  .header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px;
+  }
+  .header h1 {
+    font-size: 24px; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .refresh-btn {
+    padding: 8px 20px;
+    background: var(--accent);
+    color: white; border: none; border-radius: 20px;
+    font-size: 13px; cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .header .refresh-btn:active { transform: scale(0.95); }
+  .header .auto-refresh {
+    font-size: 12px; color: var(--text-dim);
+  }
+
+  /* 数字卡片 */
+  .stat-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-card .label {
+    font-size: 12px; color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .stat-card .value {
+    font-size: 32px; font-weight: 800;
+    font-family: -apple-system, monospace;
+  }
+  .stat-card .sub {
+    font-size: 11px; color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .stat-card.pv .value { color: #e94560; }
+  .stat-card.uv .value { color: #f39c12; }
+  .stat-card.chats .value { color: #2ecc71; }
+  .stat-card.days .value { color: #3498db; }
+
+  /* 图表区域 */
+  .chart-section {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  .chart-section h2 {
+    font-size: 16px; font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  /* 折线图 */
+  .chart-container {
+    display: flex; gap: 12px;
+    height: 180px;
+    align-items: flex-end;
+    padding: 0 4px;
+  }
+  .chart-bar-group {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+  }
+  .chart-bars {
+    display: flex; gap: 3px;
+    width: 100%; height: 140px;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .chart-bar {
+    width: 18px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease;
+    min-height: 2px;
+    position: relative;
+  }
+  .chart-bar.pv { background: var(--accent); }
+  .chart-bar.chats { background: #2ecc71; }
+  .chart-bar:hover::after {
+    content: attr(data-value);
+    position: absolute; top: -20px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px; color: var(--text);
+    white-space: nowrap;
+  }
+  .chart-label {
+    font-size: 10px; color: var(--text-dim);
+    text-align: center;
+  }
+  .chart-legend {
+    display: flex; gap: 20px;
+    margin-top: 12px;
+    justify-content: center;
+  }
+  .chart-legend span {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-dim);
+  }
+  .chart-legend .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .chart-legend .dot.pv { background: var(--accent); }
+  .chart-legend .dot.chats { background: #2ecc71; }
+
+  /* 两列布局 */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  /* 梗热度榜 */
+  .meme-rank {
+    list-style: none;
+  }
+  .meme-rank li {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 13px;
+  }
+  .meme-rank li:last-child { border-bottom: none; }
+  .meme-rank .rank {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-3); color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .meme-rank li:nth-child(1) .rank { background: var(--accent); }
+  .meme-rank li:nth-child(2) .rank { background: var(--accent-2); }
+  .meme-rank li:nth-child(3) .rank { background: #e67e22; }
+  .meme-rank .meme-name {
+    flex: 1; color: var(--text);
+  }
+  .meme-rank .meme-count {
+    color: var(--accent); font-weight: 700;
+    font-family: monospace;
+  }
+  .meme-rank .bar {
+    height: 4px; border-radius: 2px;
+    background: var(--accent);
+    min-width: 4px;
+  }
+
+  /* 强度分布 */
+  .intensity-dist {
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .intensity-row {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+  }
+  .intensity-row .label {
+    width: 60px; color: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .intensity-row .bar-bg {
+    flex: 1; height: 20px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .intensity-row .bar-fill {
+    height: 100%; border-radius: 10px;
+    transition: width 0.5s ease;
+  }
+  .intensity-row .count {
+    width: 30px; text-align: right;
+    font-family: monospace;
+    color: var(--text);
+  }
+
+  /* 对话记录 */
+  .chat-list {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .chat-item {
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  .chat-item .chat-user {
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .chat-item .chat-roast {
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .chat-item .chat-meta {
+    display: flex; gap: 8px; align-items: center;
+    margin-top: 6px;
+    font-size: 11px; color: var(--text-dim);
+  }
+  .chat-item .chat-meta .intensity-badge {
+    padding: 2px 8px; border-radius: 10px;
+    font-weight: 600;
+  }
+  .chat-item .meme-tags {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    margin-top: 4px;
+  }
+  .chat-item .meme-tag {
+    font-size: 10px; padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(233,69,96,0.15);
+    color: var(--accent);
+  }
+
+  /* 空状态 */
+  .empty {
+    text-align: center; color: var(--text-dim);
+    padding: 40px; font-size: 14px;
+  }
+
+  /* 响应式 */
+  @media (max-width: 768px) {
+    .stat-cards { grid-template-columns: repeat(2, 1fr); }
+    .two-col { grid-template-columns: 1fr; }
+    .chart-bar { width: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔥 梗王吐槽机 · 数据看板</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span class="auto-refresh" id="autoRefresh">自动刷新 30s</span>
+    <button class="refresh-btn" onclick="loadData()">刷新</button>
+  </div>
+</div>
+
+<!-- 数字卡片 -->
+<div class="stat-cards">
+  <div class="stat-card pv">
+    <div class="label">总访问量 PV</div>
+    <div class="value" id="totalPV">-</div>
+    <div class="sub" id="todayPV">今日 -</div>
+  </div>
+  <div class="stat-card uv">
+    <div class="label">独立访客 UV</div>
+    <div class="value" id="totalUV">-</div>
+    <div class="sub" id="todayUV">今日 -</div>
+  </div>
+  <div class="stat-card chats">
+    <div class="label">总对话数</div>
+    <div class="value" id="totalChats">-</div>
+    <div class="sub" id="todayChats">今日 -</div>
+  </div>
+  <div class="stat-card days">
+    <div class="label">运行天数</div>
+    <div class="value" id="totalDays">-</div>
+    <div class="sub">自部署起</div>
+  </div>
+</div>
+
+<!-- 趋势图 -->
+<div class="chart-section">
+  <h2>最近7天趋势</h2>
+  <div class="chart-container" id="chartContainer"></div>
+  <div class="chart-legend">
+    <span><span class="dot pv"></span> 访问量 PV</span>
+    <span><span class="dot chats"></span> 对话数</span>
+  </div>
+</div>
+
+<!-- 两列：梗热度 + 强度分布 -->
+<div class="two-col">
+  <div class="chart-section">
+    <h2>梗热度排行 Top15</h2>
+    <ul class="meme-rank" id="memeRank"></ul>
+  </div>
+  <div class="chart-section">
+    <h2>吐槽强度分布</h2>
+    <div class="intensity-dist" id="intensityDist"></div>
+  </div>
+</div>
+
+<!-- 最近对话 -->
+<div class="chart-section">
+  <h2>最近对话记录</h2>
+  <div class="chat-list" id="chatList"></div>
+</div>
+
+<script>
+const COLORS = ['#2ecc71','#f1c40f','#e67e22','#e74c3c','#c0392b'];
+const LABELS = ['轻调侃','有点损','毒舌级','暴击','核弹级'];
+
+async function loadData() {
+  try {
+    const res = await fetch('/api/stats');
+    const data = await res.json();
+
+    if (data.error) {
+      document.getElementById('totalPV').textContent = '0';
+      document.getElementById('totalUV').textContent = '0';
+      document.getElementById('totalChats').textContent = '0';
+      document.getElementById('totalDays').textContent = '0';
+      document.getElementById('chartContainer').innerHTML = '<div class="empty">暂无数据（Blobs 可能未启用）</div>';
+      return;
+    }
+
+    // 数字卡片
+    const today = Object.keys(data.daily).sort().pop();
+    const todayData = data.daily[today] || { pv: 0, chats: 0, uv: 0 };
+
+    document.getElementById('totalPV').textContent = data.total.pv;
+    document.getElementById('totalUV').textContent = data.total.uv;
+    document.getElementById('totalChats').textContent = data.total.chats;
+    document.getElementById('totalDays').textContent = data.total.days;
+    document.getElementById('todayPV').textContent = `今日 ${todayData.pv}`;
+    document.getElementById('todayUV').textContent = `今日 ${todayData.uv}`;
+    document.getElementById('todayChats').textContent = `今日 ${todayData.chats}`;
+
+    // 趋势图
+    renderChart(data.daily);
+
+    // 梗热度
+    renderMemeRank(data.memeRank);
+
+    // 强度分布
+    renderIntensity(data.intensityDist);
+
+    // 对话记录
+    renderChats(data.recent);
+
+  } catch (err) {
+    console.error('Load error:', err);
+  }
+}
+
+function renderChart(daily) {
+  const container = document.getElementById('chartContainer');
+  const dates = Object.keys(daily).sort();
+  const maxVal = Math.max(...dates.map(d => Math.max(daily[d].pv, daily[d].chats)), 1);
+
+  container.innerHTML = dates.map(date => {
+    const d = daily[date];
+    const pvH = Math.round((d.pv / maxVal) * 100);
+    const chatH = Math.round((d.chats / maxVal) * 100);
+    const label = date.slice(5); // MM-DD
+    return `
+      <div class="chart-bar-group">
+        <div class="chart-bars">
+          <div class="chart-bar pv" style="height:${pvH}%" data-value="PV: ${d.pv}"></div>
+          <div class="chart-bar chats" style="height:${chatH}%" data-value="对话: ${d.chats}"></div>
+        </div>
+        <div class="chart-label">${label}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderMemeRank(rank) {
+  const el = document.getElementById('memeRank');
+  if (!rank || !rank.length) {
+    el.innerHTML = '<div class="empty">暂无数据，等用户来聊吧</div>';
+    return;
+  }
+  const maxCount = rank[0].count;
+  el.innerHTML = rank.map((item, i) => `
+    <li>
+      <span class="rank">${i + 1}</span>
+      <span class="meme-name">${item.meme}</span>
+      <div class="bar" style="width:${Math.round(item.count / maxCount * 60)}px"></div>
+      <span class="meme-count">${item.count}</span>
+    </li>
+  `).join('');
+}
+
+function renderIntensity(dist) {
+  const el = document.getElementById('intensityDist');
+  const total = Object.values(dist).reduce((a, b) => a + b, 0) || 1;
+  el.innerHTML = [1,2,3,4,5].map(i => {
+    const count = dist[String(i)] || 0;
+    const pct = Math.round((count / total) * 100);
+    return `
+      <div class="intensity-row">
+        <span class="label">${LABELS[i-1]}</span>
+        <div class="bar-bg">
+          <div class="bar-fill" style="width:${pct}%;background:${COLORS[i-1]}"></div>
+        </div>
+        <span class="count">${count}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderChats(chats) {
+  const el = document.getElementById('chatList');
+  if (!chats || !chats.length) {
+    el.innerHTML = '<div class="empty">还没有对话记录，去试试吧</div>';
+    return;
+  }
+  el.innerHTML = chats.map(c => {
+    const time = new Date(c.time).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const intensity = c.intensity || 3;
+    const memeTags = (c.meme_used || []).map(m => `<span class="meme-tag">#${m}</span>`).join('');
+    return `
+      <div class="chat-item">
+        <div class="chat-user">用户: ${c.user}</div>
+        <div class="chat-roast">${c.emoji || '😏'} ${c.roast}</div>
+        <div class="meme-tags">${memeTags}</div>
+        <div class="chat-meta">
+          <span class="intensity-badge" style="background:${COLORS[intensity-1]}22;color:${COLORS[intensity-1]}">强度${intensity}</span>
+          <span>${time}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+loadData();
+setInterval(loadData, 30000);
+</script>
+
+</body>
+</html>

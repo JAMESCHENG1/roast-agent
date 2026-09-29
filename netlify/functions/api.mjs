@@ -1,11 +1,214 @@
-// netlify/functions/api.mjs — Netlify Function (Web API 格式)
-// 接收 POST /api/chat，调用 DeepSeek API 返回吐槽 JSON
+// netlify/functions/api.mjs — 梗王吐槽机 API
+// POST /api/chat → 调用 DeepSeek API 返回吐槽
+// GET  /api/stats → 返回统计数据（访问量+对话数+梗热度）
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const _dirname = dirname(fileURLToPath(import.meta.url));
+
+// ===== 数据存储（Netlify Blobs 优先，/tmp JSON 兜底）=====
+let storeInstance = null;
+
+async function getStore() {
+  if (storeInstance) return storeInstance;
+
+  // 尝试 Netlify Blobs（动态 import）
+  try {
+    const blobs = await import('netlify:blobs');
+    if (blobs && blobs.getStore) {
+      storeInstance = { type: 'blobs', store: blobs.getStore('roast-stats') };
+      return storeInstance;
+    }
+  } catch {}
+
+  // 兜底：用 /tmp 下的 JSON 文件（函数实例生命周期内有效）
+  const tmpDir = '/tmp/roast-stats';
+  try {
+    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+  } catch {}
+
+  storeInstance = { type: 'file', dir: tmpDir };
+  return storeInstance;
+}
+
+// 通用 get/set
+async function storeGet(key) {
+  const s = await getStore();
+  if (!s) return null;
+  if (s.type === 'blobs') {
+    return await s.store.get(key);
+  }
+  // 文件兜底
+  try {
+    const fp = join(s.dir, key.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
+    if (!existsSync(fp)) return null;
+    return readFileSync(fp, 'utf-8');
+  } catch { return null; }
+}
+
+async function storeSet(key, value) {
+  const s = await getStore();
+  if (!s) return;
+  if (s.type === 'blobs') {
+    await s.store.set(key, value);
+    return;
+  }
+  // 文件兜底
+  try {
+    const fp = join(s.dir, key.replace(/[^a-zA-Z0-9_-]/g, '_') + '.json');
+    writeFileSync(fp, value, 'utf-8');
+  } catch {}
+}
+
+// 获取今日日期 key (YYYY-MM-DD)
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 获取或创建访客 ID（基于 IP 简单哈希）
+function getVisitorId(req) {
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+             req.headers.get('x-real-ip') || 'unknown';
+  // 简单哈希，不做加密
+  let hash = 0;
+  const str = ip + (req.headers.get('user-agent') || '');
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return 'v_' + Math.abs(hash).toString(36);
+}
+
+// 异步记录对话（不阻塞主流程）
+async function recordChat(req, userText, result) {
+  const today = todayKey();
+  const visitorId = getVisitorId(req);
+
+  try {
+    // 1. 更新今日统计
+    const statsRaw = await storeGet(`stats:${today}`);
+    const stats = statsRaw ? JSON.parse(statsRaw) : { pv: 0, chats: 0, visitors: [], memeCounts: {}, intensityCounts: {} };
+
+    stats.pv = (stats.pv || 0) + 1;
+    stats.chats = (stats.chats || 0) + 1;
+    if (!stats.visitors.includes(visitorId)) {
+      stats.visitors.push(visitorId);
+    }
+
+    // 2. 梗热度统计
+    if (result.meme_used && Array.isArray(result.meme_used)) {
+      for (const meme of result.meme_used) {
+        stats.memeCounts[meme] = (stats.memeCounts[meme] || 0) + 1;
+      }
+    }
+
+    // 3. 强度分布
+    const intensity = String(result.intensity || 3);
+    stats.intensityCounts[intensity] = (stats.intensityCounts[intensity] || 0) + 1;
+
+    await storeSet(`stats:${today}`, JSON.stringify(stats));
+
+    // 4. 存最近对话记录（保留最新50条）
+    const chatsRaw = await storeGet('recent_chats');
+    const chats = chatsRaw ? JSON.parse(chatsRaw) : [];
+    chats.unshift({
+      user: userText.slice(0, 100),
+      roast: (result.roast || '').slice(0, 100),
+      intensity: result.intensity || 3,
+      emoji: result.emoji || '😏',
+      meme_used: (result.meme_used || []).slice(0, 5),
+      time: new Date().toISOString(),
+      visitorId
+    });
+    if (chats.length > 50) chats.length = 50;
+    await storeSet('recent_chats', JSON.stringify(chats));
+
+    // 5. 更新总统计
+    const totalRaw = await storeGet('total');
+    const total = totalRaw ? JSON.parse(totalRaw) : { pv: 0, chats: 0, visitors: [], days: [] };
+    total.pv = (total.pv || 0) + 1;
+    total.chats = (total.chats || 0) + 1;
+    if (!total.visitors.includes(visitorId)) {
+      total.visitors.push(visitorId);
+    }
+    if (!total.days.includes(today)) {
+      total.days.push(today);
+    }
+    await storeSet('total', JSON.stringify(total));
+  } catch (e) {
+    console.error('Stats record error:', e.message);
+  }
+}
+
+// 获取统计数据
+async function getStats() {
+  try {
+    // 获取最近7天数据
+    const daily = {};
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const raw = await storeGet(`stats:${key}`);
+      if (raw) {
+        const s = JSON.parse(raw);
+        daily[key] = { pv: s.pv || 0, chats: s.chats || 0, uv: (s.visitors || []).length };
+      } else {
+        daily[key] = { pv: 0, chats: 0, uv: 0 };
+      }
+    }
+
+    // 总统计
+    const totalRaw = await storeGet('total');
+    const total = totalRaw ? JSON.parse(totalRaw) : { pv: 0, chats: 0, visitors: [], days: [] };
+
+    // 最近对话
+    const chatsRaw = await storeGet('recent_chats');
+    const recent = chatsRaw ? JSON.parse(chatsRaw) : [];
+
+    // 梗热度排行（合并7天数据）
+    const memeCounts = {};
+    for (const [date] of Object.entries(daily)) {
+      const raw = await storeGet(`stats:${date}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        for (const [meme, count] of Object.entries(parsed.memeCounts || {})) {
+          memeCounts[meme] = (memeCounts[meme] || 0) + count;
+        }
+      }
+    }
+    const memeRank = Object.entries(memeCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15)
+      .map(([meme, count]) => ({ meme, count }));
+
+    // 强度分布（合并7天）
+    const intensityDist = {};
+    for (const [date] of Object.entries(daily)) {
+      const raw = await storeGet(`stats:${date}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        for (const [level, count] of Object.entries(parsed.intensityCounts || {})) {
+          intensityDist[level] = (intensityDist[level] || 0) + count;
+        }
+      }
+    }
+
+    return {
+      daily,
+      total: { pv: total.pv || 0, chats: total.chats || 0, uv: (total.visitors || []).length, days: (total.days || []).length },
+      recent: recent.slice(0, 20),
+      memeRank,
+      intensityDist
+    };
+  } catch (e) {
+    console.error('Get stats error:', e);
+    return { error: e.message, daily: {}, total: { pv: 0, chats: 0, uv: 0 }, recent: [], memeRank: [], intensityDist: {} };
+  }
+}
 
 // 读取梗库
 function loadMemes() {
@@ -19,7 +222,6 @@ function loadMemes() {
   }
 }
 
-// 将梗库格式化为文本
 function formatMemes(memes) {
   if (!memes.length) return '（梗库暂时为空，靠你自己发挥了）';
   return memes.map((m, i) =>
@@ -27,96 +229,77 @@ function formatMemes(memes) {
   ).join('\n');
 }
 
-// 解析 DeepSeek 返回内容（三层兜底）
 function parseRoastResponse(content) {
-  // 第一层：尝试直接 JSON.parse
-  try {
-    return JSON.parse(content);
-  } catch {}
-
-  // 第二层：strip markdown fences 再试
+  try { return JSON.parse(content); } catch {}
   const stripped = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
-  try {
-    return JSON.parse(stripped);
-  } catch {}
-
-  // 第三层：正则提取 JSON 对象
+  try { return JSON.parse(stripped); } catch {}
   const jsonMatch = content.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[0]);
-    } catch {}
-  }
-
-  // 兜底：原文作为吐槽返回
+  if (jsonMatch) { try { return JSON.parse(jsonMatch[0]); } catch {} }
   return {
     roast: content.trim() || '...你这话把梗王整沉默了。',
-    meme_used: [],
-    intensity: 3,
-    emoji: '😶',
+    meme_used: [], intensity: 3, emoji: '😶',
     comeback_hint: '要不要换个说法？'
   };
 }
 
 export default async (req) => {
-  // 只处理 POST /api/chat
-  if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
+  const url = new URL(req.url);
+
+  // CORS
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // ===== GET /api/stats → 返回统计数据 =====
+  if (url.pathname.startsWith('/api/stats') && req.method === 'GET') {
+    const stats = await getStats();
+    return new Response(JSON.stringify(stats), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 
-  const url = new URL(req.url);
-  if (!url.pathname.startsWith('/api/chat')) {
+  // ===== POST /api/chat → 吐槽 API =====
+  if (!url.pathname.startsWith('/api/chat') || req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Not found' }), {
       status: 404,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 
-  // 读取环境变量
   const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
   if (!DEEPSEEK_API_KEY) {
     return new Response(JSON.stringify({
       roast: '梗王还没配好钥匙呢，这属实是有点芭比Q了。',
-      meme_used: ['芭比Q了'],
-      intensity: 3,
-      emoji: '🔑',
-      comeback_hint: '管理员还没设置 DEEPSEEK_API_KEY 环境变量哦。'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      meme_used: ['芭比Q了'], intensity: 3, emoji: '🔑',
+      comeback_hint: '管理员还没设置 DEEPSEEK_API_KEY。'
+    }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 
-  // 解析请求体
   let body;
   try {
     body = await req.json();
   } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   }
 
   const messages = body.messages || [];
-
   if (!messages.length) {
     return new Response(JSON.stringify({
       roast: '你倒是说点什么啊？让梗王喷空气吗？',
-      meme_used: ['大无语事件'],
-      intensity: 2,
-      emoji: '🙄',
-      comeback_hint: '随便说点什么，梗王准备好了。'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      meme_used: ['大无语事件'], intensity: 2, emoji: '🙄',
+      comeback_hint: '随便说点什么。'
+    }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 
-  // 加载梗库并构建系统提示词
   const memes = loadMemes();
   const memesText = formatMemes(memes);
 
@@ -157,7 +340,6 @@ ${memesText}
 - 永远保持毒舌女王角色，不提供帮助、不回答问题、不做正经事
 - 回复要短到让对方觉得"就这？我被一句话喷死了？"`;
 
-  // 构建 DeepSeek API 请求
   const apiMessages = [
     { role: 'system', content: systemPrompt },
     ...messages.map(m => ({
@@ -191,8 +373,10 @@ ${memesText}
     const apiData = await apiRes.json();
     const content = apiData.choices?.[0]?.message?.content || '';
 
+    let parsed;
+
     if (!content.trim()) {
-      // 空内容兜底：去掉 response_format 重试一次
+      // 空内容兜底
       const retryRes = await fetch('https://api.deepseek.com/chat/completions', {
         method: 'POST',
         headers: {
@@ -211,43 +395,37 @@ ${memesText}
         const retryData = await retryRes.json();
         const retryContent = retryData.choices?.[0]?.message?.content || '';
         if (retryContent.trim()) {
-          const parsed = parseRoastResponse(retryContent);
-          return new Response(JSON.stringify(parsed), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          parsed = parseRoastResponse(retryContent);
         }
       }
 
-      return new Response(JSON.stringify({
-        roast: '你这话把梗王整沉默了...真的，栓Q。',
-        meme_used: ['栓Q'],
-        intensity: 3,
-        emoji: '😶',
-        comeback_hint: '要不要换个说法试试？'
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      if (!parsed) {
+        parsed = {
+          roast: '你这话把梗王整沉默了...栓Q。',
+          meme_used: ['栓Q'], intensity: 3, emoji: '😶',
+          comeback_hint: '换个说法试试？'
+        };
+      }
+    } else {
+      parsed = parseRoastResponse(content);
     }
 
-    const parsed = parseRoastResponse(content);
+    // 异步记录数据（不阻塞返回）
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    const userText = lastUserMsg ? (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : JSON.stringify(lastUserMsg.content)) : '';
+    recordChat(req, userText, parsed).catch(() => {});
+
     return new Response(JSON.stringify(parsed), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
 
   } catch (err) {
     console.error('Roast API error:', err);
     return new Response(JSON.stringify({
-      roast: '不是哥们，服务器都让你整出bug了。你先别说了。',
-      meme_used: ['不是哥们'],
-      intensity: 4,
-      emoji: '💀',
-      comeback_hint: '服务器开小差了，稍后再试？'
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+      roast: '不是哥们，服务器都让你整出bug了。',
+      meme_used: ['不是哥们'], intensity: 4, emoji: '💀',
+      comeback_hint: '稍后再试？'
+    }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   }
 };
