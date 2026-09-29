@@ -519,7 +519,7 @@ function renderChats(chats) {
     const memeTags = (c.meme_used || []).map(m => `<span class="meme-tag">#${m}</span>`).join('');
     return `
       <div class="chat-item">
-        <div class="chat-user">用户: ${c.user}</div>
+        <div class="chat-user"><span style="color:var(--accent)">${c.visitorName || c.visitorId || '匿名'}</span>: ${c.user}</div>
         <div class="chat-roast">${c.emoji || '😏'} ${c.roast}</div>
         <div class="meme-tags">${memeTags}</div>
         <div class="chat-meta">

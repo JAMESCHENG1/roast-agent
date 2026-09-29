@@ -72,7 +72,6 @@ function todayKey() {
 function getVisitorId(req) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
              req.headers.get('x-real-ip') || 'unknown';
-  // 简单哈希，不做加密
   let hash = 0;
   const str = ip + (req.headers.get('user-agent') || '');
   for (let i = 0; i < str.length; i++) {
@@ -81,10 +80,21 @@ function getVisitorId(req) {
   return 'v_' + Math.abs(hash).toString(36);
 }
 
+// 获取访客名称（优先用钉钉昵称）
+function getVisitorName(req, body) {
+  // 1. 优先用前端传来的钉钉昵称
+  if (body && body.visitor_name && body.visitor_name.trim()) {
+    return body.visitor_name.trim().slice(0, 50);
+  }
+  // 2. 降级为匿名 ID
+  return getVisitorId(req);
+}
+
 // 异步记录对话（不阻塞主流程）
-async function recordChat(req, userText, result) {
+async function recordChat(req, userText, result, requestBody) {
   const today = todayKey();
   const visitorId = getVisitorId(req);
+  const visitorName = getVisitorName(req, requestBody);
 
   try {
     // 1. 更新今日统计
@@ -120,7 +130,8 @@ async function recordChat(req, userText, result) {
       emoji: result.emoji || '😏',
       meme_used: (result.meme_used || []).slice(0, 5),
       time: new Date().toISOString(),
-      visitorId
+      visitorId,
+      visitorName
     });
     if (chats.length > 50) chats.length = 50;
     await storeSet('recent_chats', JSON.stringify(chats));
@@ -444,7 +455,7 @@ ${memesText}
     // 异步记录数据（不阻塞返回）
     const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
     const userText = lastUserMsg ? (typeof lastUserMsg.content === 'string' ? lastUserMsg.content : JSON.stringify(lastUserMsg.content)) : '';
-    recordChat(req, userText, parsed).catch(() => {});
+    recordChat(req, userText, parsed, body).catch(() => {});
 
     return new Response(JSON.stringify(parsed), {
       status: 200,

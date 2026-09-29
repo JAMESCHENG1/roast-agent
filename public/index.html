@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>梗王吐槽机 — 你说啥我都喷</title>
+<!-- 钉钉 JSAPI SDK -->
+<script src="https://g.alicdn.com/dingding/dingtalk-jsapi/3.0.25/dingtalk.open.js"></script>
 <style>
   :root {
     --bg: #0a0a0a;
@@ -474,6 +476,72 @@
 </div>
 
 <script>
+// ===== 钉钉免登获取用户昵称 =====
+let visitorName = '';
+let dingtalkReady = false;
+
+function initDingTalk() {
+  // 检测是否在钉钉环境内
+  const ua = navigator.userAgent.toLowerCase();
+  const isDingTalk = ua.includes('dingtalk') || ua.includes('dingtalkwin');
+
+  if (!isDingTalk) return;
+
+  if (typeof dt === 'undefined' && typeof DingTalkPC !== 'undefined') {
+    window.dt = DingTalkPC;
+  }
+
+  if (typeof dt === 'undefined' && typeof dingtalk !== 'undefined') {
+    window.dt = dingtalk;
+  }
+
+  if (typeof dt !== 'undefined') {
+    dingtalkReady = true;
+    // 尝试获取用户信息
+    try {
+      // 钉钉企业内部应用：通过 dd.runtime.info 获取 corpId
+      dt.runtime.getInfo({
+        onSuccess: function(info) {
+          // 获取到企业信息，可以进一步做免登
+          // 这里用 dd.biz.user.getCurrentUserInfo（企业内应用可用）
+          if (dt.biz && dt.biz.user) {
+            dt.biz.user.getCurrentUserInfo({
+              onSuccess: function(userInfo) {
+                if (userInfo && userInfo.nickName) {
+                  visitorName = userInfo.nickName;
+                }
+              },
+              onFail: function() {
+                // 降级：使用 corpId + userId
+                if (info && info.corpId) {
+                  visitorName = info.corpId + '_user';
+                }
+              }
+            });
+          }
+        },
+        onFail: function() {
+          // 降级方案：用 URL 参数
+          const params = new URLSearchParams(window.location.search);
+          visitorName = params.get('name') || params.get('ddname') || '';
+        }
+      });
+    } catch(e) {
+      console.log('DingTalk JSAPI not available:', e);
+    }
+  }
+
+  // Fallback：检查 URL 参数
+  const params = new URLSearchParams(window.location.search);
+  const urlName = params.get('name') || params.get('ddname');
+  if (urlName && !visitorName) {
+    visitorName = urlName;
+  }
+}
+
+// 页面加载时初始化钉钉
+initDingTalk();
+
 const chatArea = document.getElementById('chatArea');
 const userInput = document.getElementById('userInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -813,7 +881,7 @@ async function sendMessage() {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: history.slice(-10) })
+      body: JSON.stringify({ messages: history.slice(-10), visitor_name: visitorName })
     });
     if (!res.ok) throw new Error('API error: ' + res.status);
     const data = await res.json();
