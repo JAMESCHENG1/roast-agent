@@ -256,8 +256,20 @@ export default async (req) => {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // ===== GET /api/stats → 返回统计数据 =====
+  // ===== GET /api/stats → 返回统计数据（需密码）=====
   if (url.pathname.startsWith('/api/stats') && req.method === 'GET') {
+    const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'roast-admin-2026';
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    const queryPwd = url.searchParams.get('pwd') || '';
+
+    if (token !== ADMIN_PASSWORD && queryPwd !== ADMIN_PASSWORD) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
+    }
+
     const stats = await getStats();
     return new Response(JSON.stringify(stats), {
       status: 200,
@@ -331,8 +343,27 @@ ${memesText}
   "meme_used": ["用到的梗短语列表"],
   "intensity": 1到5的数字（默认3，离谱的话直接4-5）,
   "emoji": "一个代表情绪的emoji",
-  "comeback_hint": "极简一句引导继续对话（不超过15字）"
+  "comeback_hint": "极简一句引导继续对话（不超过15字）",
+  "topics": ["根据用户刚才说的话，生成5个引导用户继续聊的话题，每个不超过15字，要有趣/有梗/能激发表达欲"],
+  "reactions": [
+    {"emoji": "表情1", "label": "反应标签1（2-4字）", "follow_ups": ["该反应下的3个对话引导选项，每个不超过15字"]},
+    {"emoji": "表情2", "label": "反应标签2（2-4字）", "follow_ups": ["该反应下的3个对话引导选项，每个不超过15字"]},
+    {"emoji": "表情3", "label": "反应标签3（2-4字）", "follow_ups": ["该反应下的3个对话引导选项，每个不超过15字"]}
+  ]
 }
+
+## topics 生成规则
+- 话题要跟用户说的话相关，但换个角度（比如用户聊天气→话题可以是"说说你最尴尬的雨天经历"）
+- 话题要能激发表达欲，不要太正经，带点八卦/挑衅/自嘲性质
+- 5个话题风格要多样：1个挑衅型、1个回忆型、1个假设型、1个吐槽型、1个自夸型
+- 不要重复之前推荐过的话题
+
+## reactions 生成规则
+- 每轮生成3个反应按钮，emoji+label+follow_ups
+- 反应按钮要跟用户的对话内容相关，每轮不同
+- 3个反应分别对应：1个开心/好笑型、1个生气/不服型、1个破防/扎心型
+- 用户点击反应后会看到3个 follow_ups 选项，选一个继续对话
+- follow_ups 是用户可能想说的话，AI要根据这些选项继续吐槽
 
 ## 注意
 - 用户说正常的话也要找到槽点，一句话喷死
@@ -358,7 +389,7 @@ ${memesText}
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: apiMessages,
-        max_tokens: 200,
+        max_tokens: 500,
         temperature: 0.9,
         response_format: { type: 'json_object' }
       })
@@ -386,7 +417,7 @@ ${memesText}
         body: JSON.stringify({
           model: 'deepseek-chat',
           messages: apiMessages,
-          max_tokens: 200,
+          max_tokens: 500,
           temperature: 0.9
         })
       });

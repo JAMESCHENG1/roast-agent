@@ -446,7 +446,6 @@
   <div class="logo">🔥 梗王吐槽机</div>
   <div class="counter">
     <span>被喷 <b id="roastCount">0</b> 次</span>
-    <a href="/admin.html" class="admin-link">📊 数据</a>
   </div>
 </div>
 
@@ -489,31 +488,88 @@ let roastCount = 0;
 let streak = 0;
 let isWaiting = false;
 let achievements = new Set();
+let usedTopics = new Set();
 
-// ===== 话题引导 =====
-const TOPICS = [
-  { emoji: '💪', text: '我今天特别努力', category: '自夸' },
-  { emoji: '💔', text: '我失恋了很难过', category: '情感' },
-  { emoji: '💼', text: '老板又让我加班', category: '职场' },
-  { emoji: '🍜', text: '今天又吃外卖', category: '日常' },
-  { emoji: '😴', text: '我今天睡到中午', category: '摆烂' },
-  { emoji: '🤑', text: '我是全公司最帅的', category: '自恋' },
-  { emoji: '📚', text: '明天考试我还没复习', category: '校园' },
-  { emoji: '🤔', text: '你觉得人生的意义是什么', category: '哲学' },
-  { emoji: '🎮', text: '我又打了一天游戏', category: '摆烂' },
-  { emoji: '😭', text: '没人懂我', category: '卖惨' },
+// ===== 50条话题池（第一轮 fallback）=====
+const TOPIC_POOL = [
+  '我今天特别努力地摸了一天鱼',
+  '我失恋了，心如刀割',
+  '老板又画饼让我加班',
+  '我今天又吃了三顿外卖',
+  '我睡到下午才起床',
+  '我是全公司最帅的人',
+  '明天考试我今天开始预习',
+  '你觉得人生的意义是什么',
+  '我又打了一整天游戏',
+  '没人能懂我的孤独',
+  '我刚买了新手机好开心',
+  '我妈又催我找对象了',
+  '我觉得自己是个天才',
+  '我今天被老板当众骂了',
+  '我朋友说我长胖了',
+  '我已经三天没洗头了',
+  '我觉得996挺好的',
+  '我刚分手感觉自由了',
+  '我的方案又被甲方毙了',
+  '我今天跑了5公里觉得自己很自律',
+  '我觉得我下辈子能投个好胎',
+  '我把工资全花在了奶茶上',
+  '我觉得周末太短了',
+  '我室友的呼噜声要把我逼疯了',
+  '我今天的穿搭绝对是街头最靓的',
+  '我已经三年没回家了',
+  '我觉得我比领导更懂管理',
+  '我刚剪了个寸头后悔了',
+  '我养的猫不理我了',
+  '我觉得外卖比妈妈做的饭好吃',
+  '我今天在地铁上被人踩了三次',
+  '我觉得加班使我快乐',
+  '我已经一个月没发朋友圈了',
+  '我觉得我的发际线还可以抢救一下',
+  '我今天迟到被扣了50块',
+  '我觉得我上辈子一定是个富翁',
+  '我把闹钟关了睡到自然醒',
+  '我室友的泡面味弥漫整个宿舍',
+  '我觉得早起是对灵魂的亵渎',
+  '我今天一口气看完了10集剧',
+  '我面试被拒了但我觉得是他们的损失',
+  '我觉得我的拖延症已经到了艺术层面',
+  '我把前任的联系方式删了又加回来',
+  '我觉得食堂的饭比我做的还难吃',
+  '我今天称体重发现胖了5斤',
+  '我觉得我的人生规划就是没有规划',
+  '我在群里发消息没人理我',
+  '我觉得打工人就该躺平',
+  '我今天做了个美梦不想醒来',
+  '我觉得今晚一定能早睡',
 ];
 
-// 根据对话轮次动态切换话题
-function refreshTopics(round) {
-  const start = (round * 5) % TOPICS.length;
-  const picked = [];
-  for (let i = 0; i < 5; i++) {
-    picked.push(TOPICS[(start + i) % TOPICS.length]);
+function pickFallbackTopics() {
+  const available = TOPIC_POOL.filter(t => !usedTopics.has(t));
+  if (available.length < 5) {
+    usedTopics.clear();
+    return TOPIC_POOL.slice(0, 5);
   }
-  topicPills.innerHTML = picked.map((t, i) =>
-    `<div class="topic-pill" onclick="useTopic('${t.text.replace(/'/g,"\\'")}')"><span class="pill-emoji">${t.emoji}</span>${t.text}</div>`
-  ).join('');
+  const picked = [];
+  const indices = [];
+  while (picked.length < 5 && available.length > 0) {
+    const idx = Math.floor(Math.random() * available.length);
+    if (!indices.includes(idx)) {
+      picked.push(available[idx]);
+      usedTopics.add(available[idx]);
+      indices.push(idx);
+    }
+  }
+  return picked;
+}
+
+function renderTopics(topics) {
+  if (!topics || !topics.length) topics = pickFallbackTopics();
+  topicPills.innerHTML = topics.map((t, i) => {
+    const safe = t.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    const emoji = ['💪','💔','💼','🍜','😴','🤑','📚','🤔','🎮','😭'][i % 10];
+    return `<div class="topic-pill" onclick="useTopic('${safe}')"><span class="pill-emoji">${emoji}</span>${t}</div>`;
+  }).join('');
 }
 
 function useTopic(text) {
@@ -539,7 +595,6 @@ function unlockAchievement(id) {
   achievements.add(id);
   const ach = ACHIEVEMENTS[id];
   if (!ach) return;
-
   const toast = document.createElement('div');
   toast.className = 'achievement-toast';
   toast.innerHTML = `
@@ -547,8 +602,7 @@ function unlockAchievement(id) {
     <div class="ach-text">
       <div class="ach-title">${ach.title}</div>
       <div style="color:var(--text-dim);font-size:11px">${ach.desc}</div>
-    </div>
-  `;
+    </div>`;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3500);
 }
@@ -563,20 +617,17 @@ function checkAchievements(text, intensity) {
   if (text.includes('你才') || text.includes('你先') || text.includes('你自己')) unlockAchievement('comeback_king');
 }
 
-// ===== 连续对话火焰 =====
 function updateStreak() {
   streak++;
   streakCountEl.textContent = streak;
-  if (streak >= 3) {
-    streakIndicator.classList.add('active');
-  }
+  if (streak >= 3) streakIndicator.classList.add('active');
 }
 
 function startChat() {
   if (welcomeCard) welcomeCard.remove();
   userInput.disabled = false;
   sendBtn.disabled = false;
-  refreshTopics(0);
+  renderTopics(pickFallbackTopics());
   userInput.focus();
 }
 
@@ -585,13 +636,8 @@ userInput.addEventListener('input', () => {
   userInput.style.height = 'auto';
   userInput.style.height = Math.min(userInput.scrollHeight, 80) + 'px';
 });
-
-// Enter 发送
 userInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 });
 
 function addUserBubble(text) {
@@ -617,6 +663,50 @@ function removeLoadingCard() {
   if (el) el.remove();
 }
 
+// ===== 反应按钮 follow-up 弹出 =====
+function showFollowUps(followUps, btn, roastCard) {
+  // 移除已有的 follow-up 面板
+  const existing = roastCard.querySelector('.follow-up-panel');
+  if (existing) { existing.remove(); return; }
+
+  const panel = document.createElement('div');
+  panel.className = 'follow-up-panel';
+  panel.style.cssText = 'padding:8px 16px 12px;display:flex;flex-direction:column;gap:6px;border-top:1px dashed rgba(255,255,255,0.08);margin-top:4px';
+
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-size:11px;color:var(--text-dim);margin-bottom:4px';
+  hint.textContent = '选一个继续？';
+  panel.appendChild(hint);
+
+  followUps.forEach(fu => {
+    const option = document.createElement('div');
+    option.style.cssText = 'padding:8px 14px;background:rgba(255,255,255,0.05);border:1px solid var(--card-border);border-radius:10px;font-size:13px;color:var(--text);cursor:pointer;transition:all 0.2s';
+    option.textContent = fu;
+    option.onmouseenter = () => {
+      option.style.borderColor = 'var(--accent)';
+      option.style.color = 'var(--accent)';
+    };
+    option.onmouseleave = () => {
+      option.style.borderColor = 'var(--card-border)';
+      option.style.color = 'var(--text)';
+    };
+    option.onclick = () => {
+      panel.remove();
+      // 高亮被选中的反应按钮
+      roastCard.querySelectorAll('.action-btn').forEach(b => { b.style.borderColor = ''; b.style.color = ''; });
+      btn.style.borderColor = 'var(--accent)';
+      btn.style.color = 'var(--accent)';
+      // 发送选中的 follow-up
+      userInput.value = fu;
+      sendMessage();
+    };
+    panel.appendChild(option);
+  });
+
+  roastCard.querySelector('.card-actions').after(panel);
+  scrollToBottom();
+}
+
 function addRoastCard(data) {
   const intensity = data.intensity || 3;
   const intensityColors = ['#2ecc71','#f1c40f','#e67e22','#e74c3c','#c0392b'];
@@ -626,23 +716,40 @@ function addRoastCard(data) {
   div.className = 'roast-card';
   div.dataset.intensity = intensity;
 
-  // 强度条
   let bars = '';
   for (let i = 0; i < 5; i++) {
     const color = i < intensity ? intensityColors[intensity-1] : '#333';
     bars += `<span style="background:${color}"></span>`;
   }
 
-  // 梗标签
   let memeTags = '';
   if (data.meme_used && Array.isArray(data.meme_used)) {
-    data.meme_used.forEach(m => {
-      memeTags += `<span class="meme-tag">#${m}</span>`;
-    });
+    data.meme_used.forEach(m => { memeTags += `<span class="meme-tag">#${m}</span>`; });
   }
 
-  // 补刀提示
   const comeback = data.comeback_hint || '';
+
+  // 生成反应按钮（优先用 AI 返回的 reactions，否则用默认）
+  let actionsHtml = '';
+  const reactions = data.reactions;
+  if (reactions && Array.isArray(reactions) && reactions.length >= 3) {
+    reactions.forEach((r, idx) => {
+      const safeLabel = (r.label || '反应').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+      const emoji = r.emoji || '😏';
+      const followUps = (r.follow_ups || []).map(f => f.replace(/'/g, "\\'").replace(/"/g, '&quot;'));
+      actionsHtml += `<button class="action-btn" onclick='triggerReaction(this, ${JSON.stringify(followUps)}, this.closest(".roast-card"))'>${emoji} ${safeLabel}</button>`;
+    });
+  } else {
+    actionsHtml = `
+      <button class="action-btn" onclick="triggerReaction(this, [\"你还敢说？我觉得你说的不对\",\"行，那你再说一遍我听听\",\"你说得对？那为什么没人认同你\"], this.closest('.roast-card'))">😂 绷不住</button>
+      <button class="action-btn" onclick="triggerReaction(this, [\"你才嘴毒！你全家都嘴毒\",\"有本事你说句好听的\",\"你是不是对所有人这么毒\"], this.closest('.roast-card'))">😡 不服</button>
+      <button class="action-btn" onclick="triggerReaction(this, [\"确实扎心了，我承认\",\"好吧你说的有道理\",\"但我还是觉得你说得太狠了\"], this.closest('.roast-card'))">💀 扎心</button>`;
+  }
+
+  if (comeback) {
+    const safeComeback = comeback.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    actionsHtml += `<button class="action-btn" onclick="useTopic('${safeComeback}')">↩️ ${escapeHtml(comeback)}</button>`;
+  }
 
   div.innerHTML = `
     <div class="card-header">
@@ -652,67 +759,21 @@ function addRoastCard(data) {
     </div>
     <div class="card-body">${escapeHtml(data.roast || '...')}</div>
     ${memeTags ? `<div class="card-footer">${memeTags}</div>` : ''}
-    <div class="card-actions">
-      <button class="action-btn" onclick="reactToRoast(this, '😂')">😂 绷不住</button>
-      <button class="action-btn" onclick="reactToRoast(this, '😡')">😡 被气到</button>
-      <button class="action-btn" onclick="reactToRoast(this, '💀')">💀 扎心了</button>
-      ${comeback ? `<button class="action-btn" onclick="reactToRoast(this, 'comeback')">↩️ ${escapeHtml(comeback)}</button>` : ''}
-    </div>
+    <div class="card-actions">${actionsHtml}</div>
   `;
 
   chatArea.appendChild(div);
 
-  // 暴击特效
-  if (intensity >= 5) {
-    showCriticalHit();
-  }
+  if (intensity >= 5) showCriticalHit();
 
   roastCount++;
   roastCountEl.textContent = roastCount;
   scrollToBottom();
 }
 
-// 用户对吐槽的反应
-function reactToRoast(btn, type) {
-  if (type === 'comeback') {
-    // 点击补刀提示 → 自动填入并发送
-    const text = btn.textContent.replace('↩️ ', '');
-    userInput.value = text;
-    sendMessage();
-    return;
-  }
-
-  // 表情反应
-  const reactions = {
-    '😂': { reply: '你还笑？笑得出来说明喷得不够狠', emoji: '😏' },
-    '😡': { reply: '急了急了，看来被我说中了', emoji: '😤' },
-    '💀': { reply: '扎心了？这才哪到哪，姐妹', emoji: '💅' },
-  };
-  const r = reactions[type];
-  if (!r) return;
-
-  // 禁用按钮，显示计数
-  btn.style.borderColor = 'var(--accent)';
-  btn.style.color = 'var(--accent)';
-  let count = parseInt(btn.querySelector('.count')?.textContent || '0') + 1;
-  btn.innerHTML = `${type} <span class="count">${count}</span>`;
-
-  // 偶尔追加一句话（前3次反应才追加）
-  if (count <= 2) {
-    setTimeout(() => {
-      const div = document.createElement('div');
-      div.className = 'roast-card';
-      div.innerHTML = `
-        <div class="card-header">
-          <span class="emoji">${r.emoji}</span>
-          <span style="font-size:11px;color:var(--text-dim)">梗王追加</span>
-        </div>
-        <div class="card-body" style="font-size:14px;padding:8px 16px 12px">${r.reply}</div>
-      `;
-      chatArea.appendChild(div);
-      scrollToBottom();
-    }, 800);
-  }
+function triggerReaction(btn, followUps, roastCard) {
+  if (!followUps || !followUps.length) return;
+  showFollowUps(followUps, btn, roastCard);
 }
 
 function showCriticalHit() {
@@ -732,9 +793,7 @@ function escapeHtml(str) {
 }
 
 function scrollToBottom() {
-  setTimeout(() => {
-    chatArea.scrollTop = chatArea.scrollHeight;
-  }, 50);
+  setTimeout(() => { chatArea.scrollTop = chatArea.scrollHeight; }, 50);
 }
 
 async function sendMessage() {
@@ -748,22 +807,16 @@ async function sendMessage() {
 
   addUserBubble(text);
   addLoadingCard();
-
   history.push({ role: 'user', content: text });
 
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: history.slice(-10)
-      })
+      body: JSON.stringify({ messages: history.slice(-10) })
     });
-
     if (!res.ok) throw new Error('API error: ' + res.status);
-
     const data = await res.json();
-
     removeLoadingCard();
 
     if (data.roast) {
@@ -771,12 +824,12 @@ async function sendMessage() {
       history.push({ role: 'assistant', content: data.roast });
       updateStreak();
       checkAchievements(text, data.intensity || 3);
-      refreshTopics(roastCount);
+      // 用 AI 返回的 topics 渲染，否则用 fallback
+      renderTopics(data.topics);
     } else {
       addRoastCard({
         roast: '你这话把梗王CPU干烧了...容我缓缓。',
-        emoji: '🤯',
-        intensity: 3,
+        emoji: '🤯', intensity: 3,
         meme_used: ['CPU烧了'],
         comeback_hint: '要不要再试试说点人话？'
       });
@@ -785,8 +838,7 @@ async function sendMessage() {
     removeLoadingCard();
     addRoastCard({
       roast: '不是哥们，服务器都让你说宕机了。',
-      emoji: '💀',
-      intensity: 4,
+      emoji: '💀', intensity: 4,
       meme_used: ['不是哥们'],
       comeback_hint: '网络开小差了，再试一次？'
     });
